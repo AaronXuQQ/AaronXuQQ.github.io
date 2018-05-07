@@ -1,0 +1,197 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <script src="jquery.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow-x: hidden;
+    }
+
+    .prototype-container {
+      position: absolute;
+      height: 100%;
+      overflow: scroll;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .artboard {
+      position: absolute;
+      left: 0;
+      top: 0;
+      opacity: 0;
+      display: none;
+      box-shadow: 0 0 0 1px rgba(0, 0, 0, .12);
+      background-size: contain;
+      overflow: hidden; /* don't allow hotspots to overflow */
+    }
+
+    .artboard.is-active {
+      opacity: 1;
+      display: block;
+    }
+
+    .hotspot {
+      cursor: pointer;
+      position: absolute;
+      opacity: 0;
+    }
+
+    body[can-show-hotspots] .hotspot {
+      background-color: rgba(239, 108, 0, .2);
+      box-shadow:
+          0 0 0 3px rgba(239, 108, 0, .5) inset,
+          0 4px 8px rgba(239, 108, 0, .25);
+    }
+
+    .highlight-hotspots .hotspot {
+      animation: hotspotAnimation .6s ease;
+    }
+
+    @keyframes hotspotAnimation {
+      0% {
+        opacity: 0;
+      }
+      50% {
+        opacity: 1;
+      }
+      100% {
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body can-show-hotspots>
+
+  <div class="prototype-container">
+  </div>
+
+  <script>
+
+    class Proto {
+      constructor(prototypeData) {
+        this.prototypeData = prototypeData;
+        this.buildUi();
+      }
+
+      buildUi() {
+        this.buildArtboards();
+
+        if (this.prototypeData.title) {
+          document.title = this.prototypeData.title;
+        }
+
+        $(window).on('hashchange', () => {
+          this.setArtboardVisible(this.getUrlInfo().artboardId);
+        });
+
+        $(document).click(() => {
+          if (this.shouldSuppressHotspotReveal_) {
+            return;
+          }
+
+          $(document.body).removeClass('highlight-hotspots');
+          let f = document.body.offsetWidth;
+          $(document.body).addClass('highlight-hotspots');
+        });
+
+        $(window).on('resize', () => this.resize());
+
+        this.setArtboardVisible(this.getUrlInfo().artboardId);
+
+        this.resize();
+      }
+
+      resize() {
+        let xScale = window.innerHeight / this.prototypeHeight;
+        let yScale = window.innerWidth / this.prototypeWidth;
+        $('.prototype-container').css('zoom', Math.min(1, Math.min(xScale, yScale)));
+      }
+
+      getUrlInfo() {
+        let hash = window.location.hash;
+
+        return {
+          artboardId: hash ? hash.substring(1) : this.prototypeData.flowStartArtboardId,
+        };
+      }
+
+      buildArtboards() {
+        Object.keys(this.prototypeData.artboards).forEach(id => {
+          let artboardData = this.prototypeData.artboards[id];
+          let $artboard = $('<div>')
+              .addClass('artboard')
+              .attr('data-artboard-id', id)
+              .css({
+                backgroundImage: `url(${id}.png)`,
+                width: artboardData.width,
+                height: artboardData.height,
+              })
+              .appendTo('.prototype-container');
+
+          if (id == this.prototypeData.flowStartArtboardId) {
+            // this is the start artboard
+            this.prototypeWidth = artboardData.width;
+            this.prototypeHeight = artboardData.height;
+            $('.prototype-container').css({
+              width: this.prototypeWidth,
+              height: this.prototypeHeight
+            });
+          }
+
+          artboardData.hotspots.forEach(hotspotData => {
+            let $hotspot = $('<div>')
+              .addClass('hotspot')
+              .attr('data-artboard-id', id)
+              .css({
+                left: hotspotData.rectangle.x,
+                top: hotspotData.rectangle.y,
+                width: hotspotData.rectangle.width,
+                height: hotspotData.rectangle.height,
+              })
+              .appendTo($artboard);
+            $hotspot.click(event => {
+              this.gotoTarget(hotspotData.target)
+              event.stopPropagation();
+            });
+          });
+        });
+      }
+
+      gotoTarget(target) {
+        if (target == 'back') {
+          history.back();
+          return;
+        }
+
+        this.gotoArtboard(target);
+      }
+
+      gotoArtboard(artboardId) {
+        window.location.href= '#' + artboardId;
+        $('.prototype-container').scrollTo(0, 0);
+      }
+
+      setArtboardVisible(artboardId) {
+        $(document.body).removeClass('highlight-hotspots');
+        $('.artboard').removeClass('is-active');
+        $(`.artboard[data-artboard-id="${artboardId}"]`).addClass('is-active');
+      }
+    }
+
+  </script>
+  <script>
+    new Proto(
+      {"title":"毕业设计的交互原型图","flowStartArtboardId":"5E0BAACE-1C37-4741-97E1-FF454C6648C8","artboards":{"5E0BAACE-1C37-4741-97E1-FF454C6648C8":{"title":"模型选择界面","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":456.9875583203733,"y":127,"width":496,"height":52},"target":"E188C81B-13BD-4913-BF62-09F5AF91DB87"},{"rectangle":{"x":925.432002764818,"y":144.22222222222223,"width":12,"height":19},"target":"6B4FFB37-B64A-44E9-8EE2-9B4BA83FA2CB"},{"rectangle":{"x":84,"y":127,"width":180,"height":52},"target":"943E46B8-F4F4-4617-A303-7A90267EAF9C"},{"rectangle":{"x":1040,"y":127,"width":124,"height":52},"target":"CB8B5CFC-FC9F-4533-A42E-50D481776AE1"},{"rectangle":{"x":1196,"y":127,"width":126,"height":52},"target":"05BE5032-C344-4FA9-B714-2DA17A02D7FF"},{"rectangle":{"x":1178,"y":224,"width":122,"height":56},"target":"9A538A59-592E-4803-84D0-5602F05C49E3"},{"rectangle":{"x":1092,"y":560,"width":222,"height":222},"target":"683961C8-CD1B-43B0-AF3B-8E8828B90203"},{"rectangle":{"x":92,"y":300,"width":222,"height":222},"target":"5D819B5E-0CB9-4F6A-9BC7-9A33FCC0CB3D"},{"rectangle":{"x":0,"y":107,"width":40,"height":811},"target":"AF65B55F-4E9C-4EDB-9325-44A5D369B085"}]},"E188C81B-13BD-4913-BF62-09F5AF91DB87":{"title":"模型搜索界面 搜索 文字","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":1270,"y":127,"width":52,"height":52},"target":"back"}]},"6B4FFB37-B64A-44E9-8EE2-9B4BA83FA2CB":{"title":"模型搜索界面 搜索 语音","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":0,"y":107,"width":40,"height":811},"target":"AF65B55F-4E9C-4EDB-9325-44A5D369B085"},{"rectangle":{"x":1270,"y":127,"width":52,"height":52},"target":"back"}]},"943E46B8-F4F4-4617-A303-7A90267EAF9C":{"title":"模型选择界面 收藏","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":84,"y":127,"width":180,"height":52},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":0,"y":107,"width":40,"height":811},"target":"AF65B55F-4E9C-4EDB-9325-44A5D369B085"}]},"CB8B5CFC-FC9F-4533-A42E-50D481776AE1":{"title":"模型选择界面 编辑","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":84,"y":127,"width":180,"height":52},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":0,"y":107,"width":40,"height":811},"target":"AF65B55F-4E9C-4EDB-9325-44A5D369B085"}]},"05BE5032-C344-4FA9-B714-2DA17A02D7FF":{"title":"模型选择界面 排序","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":1056,"y":117,"width":276,"height":72},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":0,"y":107,"width":40,"height":811},"target":"AF65B55F-4E9C-4EDB-9325-44A5D369B085"}]},"9A538A59-592E-4803-84D0-5602F05C49E3":{"title":"个人中心 默认","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":24,"y":38,"width":75,"height":28},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":0,"y":78,"width":521,"height":200},"target":"68382188-CCFD-4737-A947-3BE6C7D61A58"},{"rectangle":{"x":0,"y":381,"width":521,"height":60},"target":"2598EDBE-0061-45DC-A155-D88EFC16F50D"},{"rectangle":{"x":0,"y":321,"width":521,"height":60},"target":"48E7C9BB-7572-4796-8A92-F6E49D03BF04"},{"rectangle":{"x":0,"y":441,"width":521,"height":60},"target":"B17E800D-200E-45E0-9064-D8893188E8F3"},{"rectangle":{"x":0,"y":501,"width":521,"height":60},"target":"333E0EEB-480A-4C6F-8B1A-00C9C44B44F9"}]},"683961C8-CD1B-43B0-AF3B-8E8828B90203":{"title":"模型编辑界面","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":40,"y":40,"width":124,"height":52},"target":"E44E69D5-95E1-49CA-AE32-C14F6E9F11BA"},{"rectangle":{"x":187,"y":40,"width":152,"height":52},"target":"E44E69D5-95E1-49CA-AE32-C14F6E9F11BA"},{"rectangle":{"x":30,"y":774,"width":220,"height":220},"target":"DFC5300E-EDAF-42ED-8282-857BFC73F889"},{"rectangle":{"x":1116,"y":774,"width":220,"height":220},"target":"DFC5300E-EDAF-42ED-8282-857BFC73F889"},{"rectangle":{"x":1274,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"},{"rectangle":{"x":1206,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"}]},"5D819B5E-0CB9-4F6A-9BC7-9A33FCC0CB3D":{"title":"模型商店 主界面","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":277,"y":904,"width":297,"height":64},"target":"53D55FE0-4364-4D5C-9419-CC6C2046A0EA"},{"rectangle":{"x":1262,"y":38,"width":80,"height":28},"target":"C0AEB5C6-2E4A-47B3-8C59-89C9FD26B539"},{"rectangle":{"x":24,"y":38,"width":55,"height":28},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"}]},"AF65B55F-4E9C-4EDB-9325-44A5D369B085":{"title":"发现模型界面 大","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":1286,"y":944,"width":48,"height":48},"target":"BF3F8547-AC23-4152-AB44-94DA6AD69B67"},{"rectangle":{"x":1146,"y":43,"width":180,"height":46},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":51,"y":34,"width":179,"height":65},"target":"8300DBE2-FF87-45C1-8DF3-A48232F85CCB"}]},"68382188-CCFD-4737-A947-3BE6C7D61A58":{"title":"个人中心 修改个人信息","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":24,"y":38,"width":75,"height":28},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":0,"y":381,"width":521,"height":60},"target":"2598EDBE-0061-45DC-A155-D88EFC16F50D"},{"rectangle":{"x":0,"y":321,"width":521,"height":60},"target":"48E7C9BB-7572-4796-8A92-F6E49D03BF04"},{"rectangle":{"x":0,"y":441,"width":521,"height":60},"target":"B17E800D-200E-45E0-9064-D8893188E8F3"},{"rectangle":{"x":0,"y":501,"width":521,"height":60},"target":"333E0EEB-480A-4C6F-8B1A-00C9C44B44F9"}]},"2598EDBE-0061-45DC-A155-D88EFC16F50D":{"title":"个人中心[1]","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":24,"y":38,"width":75,"height":28},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":0,"y":321,"width":521,"height":60},"target":"48E7C9BB-7572-4796-8A92-F6E49D03BF04"},{"rectangle":{"x":0,"y":441,"width":521,"height":60},"target":"B17E800D-200E-45E0-9064-D8893188E8F3"},{"rectangle":{"x":0,"y":501,"width":521,"height":60},"target":"333E0EEB-480A-4C6F-8B1A-00C9C44B44F9"},{"rectangle":{"x":0,"y":78,"width":521,"height":200},"target":"68382188-CCFD-4737-A947-3BE6C7D61A58"}]},"48E7C9BB-7572-4796-8A92-F6E49D03BF04":{"title":"个人中心[0]","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":24,"y":38,"width":75,"height":28},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":0,"y":381,"width":521,"height":60},"target":"2598EDBE-0061-45DC-A155-D88EFC16F50D"},{"rectangle":{"x":0,"y":441,"width":521,"height":60},"target":"B17E800D-200E-45E0-9064-D8893188E8F3"},{"rectangle":{"x":0,"y":501,"width":521,"height":60},"target":"333E0EEB-480A-4C6F-8B1A-00C9C44B44F9"},{"rectangle":{"x":0,"y":78,"width":521,"height":200},"target":"68382188-CCFD-4737-A947-3BE6C7D61A58"}]},"B17E800D-200E-45E0-9064-D8893188E8F3":{"title":"个人中心[2]","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":24,"y":38,"width":75,"height":28},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":0,"y":381,"width":521,"height":60},"target":"2598EDBE-0061-45DC-A155-D88EFC16F50D"},{"rectangle":{"x":0,"y":321,"width":521,"height":60},"target":"48E7C9BB-7572-4796-8A92-F6E49D03BF04"},{"rectangle":{"x":0,"y":501,"width":521,"height":60},"target":"333E0EEB-480A-4C6F-8B1A-00C9C44B44F9"},{"rectangle":{"x":0,"y":78,"width":521,"height":200},"target":"68382188-CCFD-4737-A947-3BE6C7D61A58"}]},"333E0EEB-480A-4C6F-8B1A-00C9C44B44F9":{"title":"个人中心[3]","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":24,"y":38,"width":75,"height":28},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":0,"y":381,"width":521,"height":60},"target":"2598EDBE-0061-45DC-A155-D88EFC16F50D"},{"rectangle":{"x":0,"y":321,"width":521,"height":60},"target":"48E7C9BB-7572-4796-8A92-F6E49D03BF04"},{"rectangle":{"x":0,"y":441,"width":521,"height":60},"target":"B17E800D-200E-45E0-9064-D8893188E8F3"},{"rectangle":{"x":0,"y":78,"width":521,"height":200},"target":"68382188-CCFD-4737-A947-3BE6C7D61A58"}]},"E44E69D5-95E1-49CA-AE32-C14F6E9F11BA":{"title":"模型编辑 保存中","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":503,"y":672,"width":360,"height":64},"target":"65DFC146-C65B-4AE5-AC3B-19EAA2EAFA2A"}]},"DFC5300E-EDAF-42ED-8282-857BFC73F889":{"title":"模型编辑界面（更多颜色）","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":30,"y":774,"width":220,"height":220},"target":"back"},{"rectangle":{"x":1116,"y":774,"width":220,"height":220},"target":"back"},{"rectangle":{"x":1274,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"},{"rectangle":{"x":1206,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"}]},"6149BE33-EE84-40B5-917C-D98F9B9EA911":{"title":"照片分享界面","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":40,"y":40,"width":124,"height":52},"target":"back"}]},"53D55FE0-4364-4D5C-9419-CC6C2046A0EA":{"title":"模型商店 调用iap","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":0,"y":0,"width":1366,"height":1024},"target":"BF15BDCB-8D36-434A-A076-231064DA20C1"},{"rectangle":{"x":948,"y":293,"width":40,"height":28},"target":"5D819B5E-0CB9-4F6A-9BC7-9A33FCC0CB3D"}]},"C0AEB5C6-2E4A-47B3-8C59-89C9FD26B539":{"title":"模型商店 已购模型","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":277,"y":904,"width":297,"height":64},"target":"53D55FE0-4364-4D5C-9419-CC6C2046A0EA"},{"rectangle":{"x":1262,"y":38,"width":80,"height":28},"target":"C0AEB5C6-2E4A-47B3-8C59-89C9FD26B539"}]},"BF3F8547-AC23-4152-AB44-94DA6AD69B67":{"title":"发现模型界面 中","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":1286,"y":944,"width":48,"height":48},"target":"AE2A8B8F-6F6A-4983-A13B-C51E8EBB289A"},{"rectangle":{"x":1286,"y":656,"width":48,"height":48},"target":"AF65B55F-4E9C-4EDB-9325-44A5D369B085"},{"rectangle":{"x":1146,"y":43,"width":180,"height":46},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":51,"y":34,"width":179,"height":65},"target":"8300DBE2-FF87-45C1-8DF3-A48232F85CCB"}]},"8300DBE2-FF87-45C1-8DF3-A48232F85CCB":{"title":"发现模型界面（AR模式）","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":666,"y":410,"width":206,"height":72},"target":"56C3E7B0-C45F-4F3F-80BA-3FBBE390CE98"},{"rectangle":{"x":40,"y":40,"width":200,"height":200},"target":"AF65B55F-4E9C-4EDB-9325-44A5D369B085"},{"rectangle":{"x":1274,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"},{"rectangle":{"x":1206,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"}]},"65DFC146-C65B-4AE5-AC3B-19EAA2EAFA2A":{"title":"模型编辑 保存完成","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":695,"y":704,"width":348,"height":64},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":323,"y":704,"width":348,"height":64},"target":"FD51D564-0A1B-4A58-94B1-9103CA2D1C94"},{"rectangle":{"x":807,"y":324,"width":84,"height":32},"target":"F28D99E8-B839-4035-A06C-19A8366E17D7"}]},"BF15BDCB-8D36-434A-A076-231064DA20C1":{"title":"模型商店 下载中","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":277,"y":904,"width":527,"height":64},"target":"5D819B5E-0CB9-4F6A-9BC7-9A33FCC0CB3D"},{"rectangle":{"x":24,"y":38,"width":55,"height":28},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"}]},"AE2A8B8F-6F6A-4983-A13B-C51E8EBB289A":{"title":"发现模型界面 小","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":1286,"y":656,"width":48,"height":48},"target":"BF3F8547-AC23-4152-AB44-94DA6AD69B67"},{"rectangle":{"x":1146,"y":43,"width":180,"height":46},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"},{"rectangle":{"x":51,"y":34,"width":179,"height":65},"target":"8300DBE2-FF87-45C1-8DF3-A48232F85CCB"}]},"56C3E7B0-C45F-4F3F-80BA-3FBBE390CE98":{"title":"发现模型界面（走近模型）","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":580,"y":95,"width":206,"height":72},"target":"back"},{"rectangle":{"x":399.8539325842697,"y":831,"width":145,"height":144},"target":"0C354008-794A-461E-A9F6-EA34E098FF7C"},{"rectangle":{"x":602,"y":831,"width":144,"height":144},"target":"EF8E5713-79D4-43C2-8A47-25DAA8B37AB0"},{"rectangle":{"x":804,"y":831,"width":144,"height":144},"target":"163A9BD6-F7E2-46F3-B357-6561EE0C0457"},{"rectangle":{"x":1274,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"},{"rectangle":{"x":1206,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"}]},"FD51D564-0A1B-4A58-94B1-9103CA2D1C94":{"title":"模型编辑 提交模型选择价格","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":899,"y":704,"width":144,"height":64},"target":"back"},{"rectangle":{"x":323,"y":704,"width":552,"height":64},"target":"9BCAD68A-CD5B-4627-8605-7C761A2C637C"}]},"F28D99E8-B839-4035-A06C-19A8366E17D7":{"title":"模型编辑 保存完成 输入名称","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":1174,"y":8,"width":80,"height":56},"target":"back"},{"rectangle":{"x":1270,"y":8,"width":80,"height":56},"target":"back"}]},"0C354008-794A-461E-A9F6-EA34E098FF7C":{"title":"发现模型界面（走近模型） 点赞","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":399.8539325842697,"y":831,"width":145,"height":144},"target":"back"},{"rectangle":{"x":1274,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"},{"rectangle":{"x":1206,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"}]},"EF8E5713-79D4-43C2-8A47-25DAA8B37AB0":{"title":"发现模型界面（走近模型） 评论","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":1174,"y":8,"width":80,"height":56},"target":"back"},{"rectangle":{"x":1270,"y":8,"width":80,"height":56},"target":"back"}]},"163A9BD6-F7E2-46F3-B357-6561EE0C0457":{"title":"发现模型界面（走近模型） 更多","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":804,"y":831,"width":144,"height":144},"target":"back"},{"rectangle":{"x":602,"y":831,"width":144,"height":144},"target":"CA03436B-EB36-408C-A039-FE1B8B5124A8"},{"rectangle":{"x":399.8539325842685,"y":831,"width":145,"height":144},"target":"FF596D64-FAF7-4AAC-A6A7-077B31FCDFD7"},{"rectangle":{"x":1274,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"},{"rectangle":{"x":1206,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"}]},"9BCAD68A-CD5B-4627-8605-7C761A2C637C":{"title":"模型编辑 提交模型成功","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":695,"y":704,"width":348,"height":64},"target":"5E0BAACE-1C37-4741-97E1-FF454C6648C8"}]},"CA03436B-EB36-408C-A039-FE1B8B5124A8":{"title":"发现模型界面（走近模型） 更多 屏蔽","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":712,"y":573,"width":44,"height":30},"target":"56C3E7B0-C45F-4F3F-80BA-3FBBE390CE98"},{"rectangle":{"x":1274,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"},{"rectangle":{"x":1206,"y":40,"width":52,"height":52},"target":"6149BE33-EE84-40B5-917C-D98F9B9EA911"}]},"FF596D64-FAF7-4AAC-A6A7-077B31FCDFD7":{"title":"发现模型界面（走近模型） 更多 举报","width":1366,"height":1024,"hotspots":[{"rectangle":{"x":868,"y":360,"width":42,"height":29},"target":"back"}]}}}
+    );
+  </script>
+
+</body>
+</html>
